@@ -14,7 +14,7 @@ using namespace std;
 
     int print_rc_options(int x, int y, int w, int option_selected);
     
-    void render_first_screen();
+    void set_rc();
 
 // Colors
     string black = "\033[30m";
@@ -46,12 +46,12 @@ using namespace std;
 int screen_width, screen_height;
 int rows = 3, columns = 3; // Min : 3x3
 int grid[8][8]; // Max : 8x8
-int line_start = 10;
+int line_number = 10;
 
 main()
 {
     cursor_hide();
-    render_first_screen();
+    set_rc();
 }
 
 void gotoxy(int x, int y)
@@ -118,8 +118,7 @@ void print_title(int x, int y)
     }
 }
 
-
-void render_first_screen()
+void set_rc()
 {
     system("cls");
     set_screen_sizes();
@@ -127,7 +126,6 @@ void render_first_screen()
     print_title(get_center(70),2);
 
     int center = get_center(30);
-    int line_number = line_start;
 
     cout << bright_yellow;
     print_on_center(++line_number, "Press Space Key To Get Started With The Game !");
@@ -137,7 +135,7 @@ void render_first_screen()
     cout << bright_cyan << "Select Number of Columns :";
 
     line_number += 2;
-    print_rc_options(center, line_number, 30, 0);
+    columns = print_rc_options(center, line_number, 30, 0);
 
     
     line_number += 3;
@@ -145,7 +143,16 @@ void render_first_screen()
     cout << bright_cyan << "Select Number of Rows :";
 
     line_number += 2;
-    print_rc_options(center, line_number, 30, 0);
+    rows = print_rc_options(center, line_number, 30, 0);
+
+    string empty_row = "";
+    for (int i = 0; i < screen_width; i++) empty_row += ' ';
+    
+    for (int i = 0; i < 11; i++)
+    {
+        gotoxy(0, 10 + i);
+        cout << empty_row;
+    }
 }
 
 int print_rc_options(int x, int y, int w, int option_selected)
