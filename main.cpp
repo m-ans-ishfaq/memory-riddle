@@ -15,6 +15,8 @@ using namespace std;
     int print_rc_options(int x, int y, int w, int option_selected);
     
     void set_rc();
+    void generate_box(int x, int y);
+    void generate_grid();
 
 // Colors
     string black = "\033[30m";
@@ -52,6 +54,7 @@ main()
 {
     cursor_hide();
     set_rc();
+    generate_grid();
 }
 
 void gotoxy(int x, int y)
@@ -192,4 +195,22 @@ int print_rc_options(int x, int y, int w, int option_selected)
 
     gotoxy(x+(option_selected*gap), y+1); cout << " ";
     return options[option_selected];
+}
+
+void generate_box(int x, int y)
+{
+    gotoxy(x, y+0); cout << "-----";
+    gotoxy(x, y+1); cout << "|   |";
+    gotoxy(x, y+2); cout << "-----";
+}
+
+void generate_grid()
+{
+    int x = get_center(columns*6);
+    int y = (screen_height - 10 - rows*4)/2;
+
+    cout << white;
+    for (int i = 0; i < columns; i++)
+        for (int j = 0; j < rows; j++)
+            generate_box(x+(i*7),10+y+(j*4));
 }
