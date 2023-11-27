@@ -2,6 +2,8 @@
 #include<string>
 #include<conio.h>
 #include<windows.h>
+#include <cstdlib>
+#include <ctime>
 using namespace std;
 
 // Prototypes
@@ -17,6 +19,9 @@ using namespace std;
     void set_rc();
     void generate_box(int x, int y);
     void generate_grid();
+    int get_random_number(int start, int end);
+    void fill_grid();
+    void handle_grid_movement();
 
 // Colors
     string black = "\033[30m";
@@ -47,7 +52,8 @@ using namespace std;
 // States
 int screen_width, screen_height;
 int rows = 3, columns = 3; // Min : 3x3
-int grid[8][8]; // Max : 8x8
+char grid[8][8]; // Max : 8x8
+int selected_row = 0, selected_column = 0;
 int line_number = 10;
 
 main()
@@ -55,6 +61,7 @@ main()
     cursor_hide();
     set_rc();
     generate_grid();
+    handle_grid_movement();
 }
 
 void gotoxy(int x, int y)
@@ -212,5 +219,73 @@ void generate_grid()
     cout << white;
     for (int i = 0; i < columns; i++)
         for (int j = 0; j < rows; j++)
-            generate_box(x+(i*7),10+y+(j*4));
+            {
+                if (i == selected_row && j == selected_column) cout << bright_magenta;
+                else cout << bright_white;
+                generate_box(x+(i*7),10+y+(j*4));
+            }
+    
+    fill_grid();
+}
+
+int get_random_number(int start, int end)
+{
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    int random_number = std::rand() % (end - start + 1) + start;
+    return random_number;
+}
+
+void fill_grid()
+{
+    string random_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
+    for (int i = 0; i < rows; i++)
+    {
+        for (int j = 0; j < columns; j++)
+        {
+            int random_index = get_random_number(0, random_chars.length() - 1);
+            int random_char = random_chars[random_index];
+            grid[i][j] = random_char;
+        }
+    }
+}
+
+void handle_grid_movement()
+{
+
+    int x = get_center(columns*6);
+    int y = (screen_height - 10 - rows*4)/2;
+
+    while (true) // Game Loop
+    {
+        int c = getch();
+
+        if (c == key_up || c == key_down || c == key_left || c == key_right)
+        {
+            cout << bright_white;
+            generate_box(x+(selected_column*7),10+y+(selected_row*4));
+        }
+
+        if (c == key_up)
+        {
+            selected_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
+        }
+        else if (c == key_down)
+        {
+            selected_row = (selected_row >= rows - 1 ? 0 : selected_row + 1);
+        }
+        else if (c == key_left)
+        {
+            selected_column = (selected_column <= 0 ? columns - 1 : selected_column - 1);
+        }
+        else if (c == key_right)
+        {
+            selected_column = (selected_column >= columns - 1 ? 0 : selected_column + 1);
+        }
+
+        if (c == key_up || c == key_down || c == key_left || c == key_right)
+        {
+            cout << bright_magenta;
+            generate_box(x+(selected_column*7),10+y+(selected_row*4));
+        }
+    }
 }
