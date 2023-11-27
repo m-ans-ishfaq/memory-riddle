@@ -2,8 +2,11 @@
 #include<string>
 #include<conio.h>
 #include<windows.h>
-#include <cstdlib>
-#include <ctime>
+#include<ctime>
+#include<random>
+#include<vector>
+#include<algorithm>
+
 using namespace std;
 
 // Prototypes
@@ -21,7 +24,10 @@ using namespace std;
     void generate_grid();
     int get_random_number(int start, int end);
     void fill_grid();
+    string remove_character(string input_str, char char_to_remove);
     void handle_grid_movement();
+    void shuffle_array(int arr[], int size);
+    string get_grid_fill_sequence();
 
 // Colors
     string black = "\033[30m";
@@ -48,6 +54,7 @@ using namespace std;
     int key_down = 80;
     int key_left = 75;
     int key_right = 77;
+    int key_escpae = 27;
 
 // States
 int screen_width, screen_height;
@@ -55,9 +62,12 @@ int rows = 3, columns = 3; // Min : 3x3
 char grid[8][8]; // Max : 8x8
 int selected_row = 0, selected_column = 0;
 int line_number = 10;
+int attempts = 0;
+int selected_cells[2][2] = {{-1, -1}, {-1, -1}}; // (-1,-1) means no cell has been revealed yet, the first point : column and second point : row
 
 main()
 {
+    srand(time(0));
     cursor_hide();
     set_rc();
     generate_grid();
@@ -228,25 +238,77 @@ void generate_grid()
     fill_grid();
 }
 
-int get_random_number(int start, int end)
-{
-    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+int get_random_number(int start, int end) {
+
+    // Generate a random number between start and end (inclusive)
     int random_number = std::rand() % (end - start + 1) + start;
+
     return random_number;
 }
 
 void fill_grid()
 {
-    string random_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
-    for (int i = 0; i < rows; i++)
+    
+    string grid_fill_sequence = get_grid_fill_sequence();
+
+    int row = 0, column = 0;
+    for (int i = 0; i < grid_fill_sequence.length(); i++)
     {
-        for (int j = 0; j < columns; j++)
+        grid[row][column] = grid_fill_sequence[i];
+        column++;
+        if (column >= columns)
         {
-            int random_index = get_random_number(0, random_chars.length() - 1);
-            int random_char = random_chars[random_index];
-            grid[i][j] = random_char;
+            column = 0;
+            row++;
         }
     }
+}
+
+void shuffle_array(int arr[], int size) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    shuffle(arr, arr + size, gen);
+}
+
+string get_grid_fill_sequence() {
+    // The grid needs to be filled so that only rows * columns / 2 different characters are selected
+    // Then Doubled
+    // And placed randomly all over the grid
+    // And if the product is even then one must be whitespace
+    string random_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
+
+    int unique_chars_needed = (rows * columns / 2 == 0) ? rows*columns/2 : rows*columns/2 + 1;
+
+    // Create a string with unique characters
+    string unique_chars(random_chars.begin(), random_chars.begin() + unique_chars_needed);
+    unique_chars += unique_chars;
+
+    mt19937 g(time(0));
+    shuffle(unique_chars.begin(), unique_chars.end(), g);
+
+    // Create the resultant string
+    string resultant;
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < columns; ++j) {
+            resultant += unique_chars[i * columns + j];
+        }
+    }
+
+    // Add a whitespace if the product is odd
+    if ((rows * columns) % 2 != 0) {
+        resultant[rows * columns / 2] = ' ';
+    }
+
+    return resultant;
+}
+string remove_character(string input_str, char char_to_remove) {
+    string result_str;
+    for (char c : input_str) {
+        if (c != char_to_remove) {
+            result_str += c;
+        }
+    }
+    return result_str;
 }
 
 void handle_grid_movement()
@@ -280,6 +342,28 @@ void handle_grid_movement()
         else if (c == key_right)
         {
             selected_column = (selected_column >= columns - 1 ? 0 : selected_column + 1);
+        }
+        else if (c == key_space)
+        {
+            cout << bright_cyan;
+            generate_box(x+(selected_column*7),10+y+(selected_row*4));
+
+            if (selected_cells[0][0] == -1)
+            {
+                selected_cells[1][0] = selected_column;
+                selected_cells[1][1] = selected_row;
+            }
+            else
+            {
+                selected_cells[0][0] = selected_column;
+                selected_cells[0][1] = selected_row;
+            }
+            
+            gotoxy(x+(selected_column*7)+2,10+y+(selected_row*4)+1); cout << grid[selected_row][selected_column];
+        }
+        else if (c == key_escpae)
+        {
+            exit(0);
         }
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
