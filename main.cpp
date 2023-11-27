@@ -323,13 +323,17 @@ void handle_grid_movement()
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
-            cout << bright_white;
-            generate_box(x+(selected_column*7),10+y+(selected_row*4));
+            if (selected_cells[1][0] != -1)
+            {
+                cout << bright_white;
+                generate_box(x+(selected_column*7),10+y+(selected_row*4));
+            }
         }
 
         if (c == key_up)
         {
-            selected_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
+            int new_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
+            if (grid[new_row][selected_column] == '\0') continue;
         }
         else if (c == key_down)
         {
