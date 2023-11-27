@@ -234,6 +234,8 @@ void generate_grid()
     int x = get_center(columns*6);
     int y = (screen_height - 10 - rows*4)/2;
 
+    fill_grid();
+
     cout << white;
     for (int i = 0; i < columns; i++)
         for (int j = 0; j < rows; j++)
@@ -241,9 +243,10 @@ void generate_grid()
                 if (i == selected_row && j == selected_column) cout << bright_magenta;
                 else cout << bright_white;
                 generate_box(x+(i*7),10+y+(j*4));
+                gotoxy(x+(i*7)+2,10+y+(j*4)+1);
+                cout << grid[i][j];
             }
     
-    fill_grid();
 }
 
 int get_random_number(int start, int end) {
@@ -373,7 +376,7 @@ void handle_grid_movement()
             // In case cell is just whitespace, skip it
             if (grid[selected_row][selected_column] == ' ')
             {
-                Sleep(1000);
+                Sleep(500);
                 grid[selected_row][selected_column] = '\0';
                 remove_box(x+(selected_column*7),10+y+(selected_row*4));
                 if (check_for_victory()) break;
@@ -386,11 +389,11 @@ void handle_grid_movement()
             }
             else
             {
+                Sleep(500);
                 // If same
                 if (selected_cell == grid[selected_row][selected_column])
                 {
                     // All cells with such character are replaced with \0 and removed
-                    Sleep(1000);
                     for (int i = 0; i < rows; i++)
                         for (int j = 0; j < columns; j++)
                             if (grid[i][j] == selected_cell)
@@ -403,6 +406,15 @@ void handle_grid_movement()
                 }
                 else // Otherwise, just reset
                 {
+                    // All cells with such character or the current character should be hided
+                    for (int i = 0; i < rows; i++)
+                        for (int j = 0; j < columns; j++)
+                            if (grid[i][j] == selected_cell || grid[i][j] == grid[selected_row][selected_column])
+                            {
+                                cout << bright_white;
+                                generate_box(x+(j*7),10+y+(i*4));
+                            }
+                                    
                     selected_cell = '\0';
                 }
             }
