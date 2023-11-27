@@ -28,6 +28,7 @@ using namespace std;
     void handle_grid_movement();
     void shuffle_array(int arr[], int size);
     string get_grid_fill_sequence();
+    bool check_for_victory();
 
 // Colors
     string black = "\033[30m";
@@ -63,7 +64,7 @@ char grid[8][8]; // Max : 8x8
 int selected_row = 0, selected_column = 0;
 int line_number = 10;
 int attempts = 0;
-int selected_cells[2][2] = {{-1, -1}, {-1, -1}}; // (-1,-1) means no cell has been revealed yet, the first point : column and second point : row
+char selected_cell = '\0';
 
 main()
 {
@@ -221,6 +222,13 @@ void generate_box(int x, int y)
     gotoxy(x, y+2); cout << "-----";
 }
 
+void remove_box(int x, int y)
+{
+    gotoxy(x, y+0); cout << "     ";
+    gotoxy(x, y+1); cout << "     ";
+    gotoxy(x, y+2); cout << "     ";
+}
+
 void generate_grid()
 {
     int x = get_center(columns*6);
@@ -319,21 +327,22 @@ void handle_grid_movement()
 
     while (true) // Game Loop
     {
+
         int c = getch();
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
-            if (selected_cells[1][0] != -1)
+            if (selected_cell == '\0')
             {
                 cout << bright_white;
                 generate_box(x+(selected_column*7),10+y+(selected_row*4));
             }
         }
+        
 
         if (c == key_up)
         {
-            int new_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
-            if (grid[new_row][selected_column] == '\0') continue;
+            selected_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
         }
         else if (c == key_down)
         {
@@ -347,33 +356,78 @@ void handle_grid_movement()
         {
             selected_column = (selected_column >= columns - 1 ? 0 : selected_column + 1);
         }
-        else if (c == key_space)
-        {
-            cout << bright_cyan;
-            generate_box(x+(selected_column*7),10+y+(selected_row*4));
-
-            if (selected_cells[0][0] == -1)
-            {
-                selected_cells[1][0] = selected_column;
-                selected_cells[1][1] = selected_row;
-            }
-            else
-            {
-                selected_cells[0][0] = selected_column;
-                selected_cells[0][1] = selected_row;
-            }
-            
-            gotoxy(x+(selected_column*7)+2,10+y+(selected_row*4)+1); cout << grid[selected_row][selected_column];
-        }
-        else if (c == key_escpae)
-        {
-            exit(0);
-        }
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
             cout << bright_magenta;
             generate_box(x+(selected_column*7),10+y+(selected_row*4));
         }
+        
+        // Process the game
+        if (c == key_space)
+        {
+            cout << bright_cyan;
+            generate_box(x+(selected_column*7),10+y+(selected_row*4));
+            gotoxy(x+(selected_column*7)+2,10+y+(selected_row*4)+1); cout << grid[selected_row][selected_column];
+
+            // In case cell is just whitespace, skip it
+            if (grid[selected_row][selected_column] == ' ')
+            {
+                Sleep(1000);
+                grid[selected_row][selected_column] = '\0';
+                remove_box(x+(selected_column*7),10+y+(selected_row*4));
+                if (check_for_victory()) break;
+                continue;
+            }
+
+            if (selected_cell == '\0')
+            {
+                selected_cell = grid[selected_row][selected_column];
+            }
+            else
+            {
+                // If same
+                if (selected_cell == grid[selected_row][selected_column])
+                {
+                    // All cells with such character are replaced with \0 and removed
+                    Sleep(1000);
+                    for (int i = 0; i < rows; i++)
+                        for (int j = 0; j < columns; j++)
+                            if (grid[i][j] == selected_cell)
+                                {
+                                    grid[i][j] = '\0';
+                                    remove_box(x+(j*7),10+y+(i*4));
+                                }
+                        
+                    if (check_for_victory()) break;
+                }
+                else // Otherwise, just reset
+                {
+                    selected_cell = '\0';
+                }
+            }
+            
+        }
+        else if (c == key_escpae)
+        {
+            exit(0);
+        }
+
     }
+}
+
+bool check_for_victory()
+{
+    // Check for victory
+    int nulls = 0;
+    for (int i = 0; i < rows; i++)
+        for (int j = 0; j < columns; j++)
+            if (grid[i][j] == '\0') nulls++;
+    if (nulls == rows*columns)
+    {
+        system("cls");
+        gotoxy(0,0); cout << "YOU WIN !";
+        return 1;
+    }
+    return 0;
 }
