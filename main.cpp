@@ -64,7 +64,7 @@ char grid[8][8]; // Max : 8x8
 int selected_row = 0, selected_column = 0;
 int line_number = 10;
 int attempts = 0;
-char selected_cell = '\0';
+int selected_cell_row = -1, selected_cell_column = -1;
 
 main()
 {
@@ -243,8 +243,6 @@ void generate_grid()
                 if (i == selected_row && j == selected_column) cout << bright_magenta;
                 else cout << bright_white;
                 generate_box(x+(i*7),10+y+(j*4));
-                gotoxy(x+(i*7)+2,10+y+(j*4)+1);
-                cout << grid[i][j];
             }
     
 }
@@ -330,19 +328,19 @@ void handle_grid_movement()
 
     while (true) // Game Loop
     {
+        gotoxy(0,0); cout << selected_column << "," << selected_row;
 
         int c = getch();
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
-            if (selected_cell == '\0')
+            if (selected_row != selected_cell_row || selected_column != selected_cell_column)
             {
                 cout << bright_white;
                 generate_box(x+(selected_column*7),10+y+(selected_row*4));
             }
         }
         
-
         if (c == key_up)
         {
             selected_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
@@ -383,39 +381,28 @@ void handle_grid_movement()
                 continue;
             }
 
-            if (selected_cell == '\0')
+            if (selected_cell_row == -1)
             {
-                selected_cell = grid[selected_row][selected_column];
+                selected_cell_row = selected_row;
+                selected_cell_column = selected_column;
             }
             else
             {
                 Sleep(500);
                 // If same
-                if (selected_cell == grid[selected_row][selected_column])
+                if (grid[selected_cell_row][selected_cell_column] == grid[selected_row][selected_column])
                 {
-                    // All cells with such character are replaced with \0 and removed
-                    for (int i = 0; i < rows; i++)
-                        for (int j = 0; j < columns; j++)
-                            if (grid[i][j] == selected_cell)
-                                {
-                                    grid[i][j] = '\0';
-                                    remove_box(x+(j*7),10+y+(i*4));
-                                }
-                        
+                    grid[selected_cell_row][selected_cell_column] = '\0';
+                    remove_box(x+(selected_cell_column*7),10+y+(selected_cell_row*4));
+                    remove_box(x+(selected_column*7),10+y+(selected_row*4));
                     if (check_for_victory()) break;
                 }
                 else // Otherwise, just reset
                 {
-                    // All cells with such character or the current character should be hided
-                    for (int i = 0; i < rows; i++)
-                        for (int j = 0; j < columns; j++)
-                            if (grid[i][j] == selected_cell || grid[i][j] == grid[selected_row][selected_column])
-                            {
-                                cout << bright_white;
-                                generate_box(x+(j*7),10+y+(i*4));
-                            }
-                                    
-                    selected_cell = '\0';
+                    cout << bright_white;
+                    generate_box(x+(selected_column*7),10+y+(selected_row*4));
+                    generate_box(x+(selected_cell_column*7),10+y+(selected_cell_row*4));            
+                    selected_cell_row = -1, selected_cell_column = -1;
                 }
             }
             
