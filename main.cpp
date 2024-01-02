@@ -26,10 +26,12 @@ using namespace std;
     int get_random_number(int start, int end);
     void fill_grid();
     string remove_character(string input_str, char char_to_remove);
+    void print_attempts_bar();
     void handle_grid_movement();
     void shuffle_array(int arr[], int size);
     string get_grid_fill_sequence();
     bool check_for_victory();
+    void you_lose();
 
 // Colors
     string black = "\033[30m";
@@ -65,6 +67,7 @@ char grid[8][8]; // Max : 8x8
 vector<int> cursor = {0,0}; // x,y
 vector<int> selected = {-1,-1}; // x,y
 int line_number = 10;
+int total_attempts;
 int attempts = 0;
 
 main()
@@ -73,6 +76,8 @@ main()
     cursor_hide();
     set_rc();
     generate_grid();
+    total_attempts = rows*columns;
+    print_attempts_bar();
     handle_grid_movement();
 }
 
@@ -148,24 +153,25 @@ void set_rc()
     print_title(get_center(70),2);
 
     int center = get_center(30);
+    int y = line_number;
 
     cout << bright_yellow;
-    print_on_center(++line_number, "Press Space Key To Get Started With The Game !");
+    print_on_center(++y, "Press Space Key To Get Started With The Game !");
 
-    line_number += 2;
-    gotoxy(center, line_number);
+    y += 2;
+    gotoxy(center, y);
     cout << bright_cyan << "Select Number of Columns :";
 
-    line_number += 2;
-    columns = print_rc_options(center, line_number, 30, 0);
+    y += 2;
+    columns = print_rc_options(center, y, 30, 0);
 
     
-    line_number += 3;
-    gotoxy(center, line_number);
+    y += 3;
+    gotoxy(center, y);
     cout << bright_cyan << "Select Number of Rows :";
 
-    line_number += 2;
-    rows = print_rc_options(center, line_number, 30, 0);
+    y += 2;
+    rows = print_rc_options(center, y, 30, 0);
 
     string empty_row = "";
     for (int i = 0; i < screen_width; i++) empty_row += ' ';
@@ -266,7 +272,6 @@ void fill_grid()
 {
     
     string grid_fill_sequence = get_grid_fill_sequence();
-
     int row = 0, column = 0;
     for (int i = 0; i < grid_fill_sequence.length(); i++)
     {
@@ -293,29 +298,30 @@ string get_grid_fill_sequence() {
     // And if the product is even then one must be whitespace
     string random_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789";
 
-    int unique_chars_needed = (rows * columns / 2 == 0) ? rows*columns/2 : rows*columns/2 + 1;
-
-    // Create a string with unique characters
-    string unique_chars(random_chars.begin(), random_chars.begin() + unique_chars_needed);
-    unique_chars += unique_chars;
-
-    mt19937 g(time(0));
-    shuffle(unique_chars.begin(), unique_chars.end(), g);
-
-    // Create the resultant string
-    string resultant;
-    for (int i = 0; i < rows; ++i) {
-        for (int j = 0; j < columns; ++j) {
-            resultant += unique_chars[i * columns + j];
+    int unique_chars_needed = rows*columns/2;
+    string sequence = "";
+    for (int i = 0; i < unique_chars_needed; i++)
+    {
+        int random_chars_length = random_chars.length();
+        while (true)
+        {
+            int random_index = rand() % random_chars_length;
+            char random_char = random_chars[random_index];
+            for (int j = 0; j < sequence.length(); j++)
+                if (sequence[j] == random_char)
+                    continue;
+            sequence += random_char;
+            break;
         }
     }
+    sequence += sequence;
+    if (rows*columns/2 % 2 != 0)
+        sequence += ' ';
+    
+    mt19937 g(time(0));
+    shuffle(sequence.begin(), sequence.end(), g);
 
-    // Add a whitespace if the product is odd
-    if ((rows * columns) % 2 != 0) {
-        resultant[rows * columns / 2] = ' ';
-    }
-
-    return resultant;
+    return sequence;
 }
 string remove_character(string input_str, char char_to_remove) {
     string result_str;
@@ -347,6 +353,30 @@ bool cell_is_available(int row, int column)
     return (!cell_is_null && !cell_has_already_been_selected);
 }
 
+void print_attempts_bar()
+{
+    int title_width = 70;
+    int attempts_left = total_attempts - attempts;
+    float attempts_left_percent = attempts_left/float(total_attempts);
+    int highlighted_bar_length = attempts_left_percent * title_width;
+    int null_bar_length = title_width - highlighted_bar_length;
+    string bar = "";
+    int percentage = attempts_left_percent * 100;
+    if (percentage > 66)
+        bar += bright_green;
+    else if (percentage > 33)
+        bar += bright_yellow;
+    else
+        bar += bright_red;
+    for (int i = 0; i < highlighted_bar_length; i++)
+        bar += '\xDC';
+    bar += bright_black;
+    for (int i = 0; i < null_bar_length; i++)
+        bar += '\xDC';
+    gotoxy((screen_width - title_width)/2, 0);
+    cout << bar;
+}
+
 void handle_grid_movement()
 {
 
@@ -355,8 +385,6 @@ void handle_grid_movement()
 
     while (true) // Game Loop
     {
-        gotoxy(0,0); cout << cursor[0] << "," << cursor[1];
-
         int c = getch();
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
@@ -409,6 +437,7 @@ void handle_grid_movement()
                 Sleep(500);
                 grid[cursor[1]][cursor[0]] = '#';
                 erase_box(y,x);
+                check_for_victory();
                 continue;
             }
 
@@ -435,7 +464,12 @@ void handle_grid_movement()
                     generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
                     generate_box(x+(selected[0]*7),10+y+(selected[1]*4));            
                     selected[0] = -1, selected[1] = -1;
+                    attempts++;
+                    if (attempts >= total_attempts)
+                        you_lose();
+                    print_attempts_bar();
                 }
+                check_for_victory();
             }
             
         }
@@ -447,6 +481,21 @@ void handle_grid_movement()
     }
 }
 
+void you_lose()
+{
+    string bars = bright_red;
+        for (int i = 0; i < 70; i++)
+            bars += '\xDC';
+    gotoxy((screen_width - 70)/2, (screen_height-5)/2);
+    cout << bars;
+    print_on_center((screen_height-5)/2 + 2, "YOU LOSE!");
+    gotoxy((screen_width - 70)/2, (screen_height-5)/2 + 4);
+    cout << bars;
+    getch();
+    system("cls");
+    exit(0);
+}
+
 bool check_for_victory()
 {
     // Check for victory
@@ -456,9 +505,17 @@ bool check_for_victory()
             if (grid[i][j] == '#') nulls++;
     if (nulls == rows*columns)
     {
+        string bars = bright_cyan;
+        for (int i = 0; i < 70; i++)
+            bars += '\xDC';
+        gotoxy((screen_width - 70)/2, (screen_height-5)/2);
+        cout << bars;
+        print_on_center((screen_height-5)/2 + 2, "CONGRATULATIONS! YOU WIN!");
+        gotoxy((screen_width - 70)/2, (screen_height-5)/2 + 4);
+        cout << bars;
+        getch();
         system("cls");
-        gotoxy(0,0); cout << "YOU WIN !";
-        return 1;
+        exit(0);
     }
     return 0;
 }
