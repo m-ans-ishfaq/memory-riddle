@@ -61,10 +61,10 @@ using namespace std;
 int screen_width, screen_height;
 int rows = 3, columns = 3; // Min : 3x3
 char grid[8][8]; // Max : 8x8
-int selected_row = 0, selected_column = 0;
+vector<int> cursor = {0,0}; // x,y
+vector<int> selected = {-1,-1}; // x,y
 int line_number = 10;
 int attempts = 0;
-int selected_cell_row = -1, selected_cell_column = -1;
 
 main()
 {
@@ -231,19 +231,25 @@ void remove_box(int x, int y)
 
 void generate_grid()
 {
-    int x = get_center(columns*6);
-    int y = (screen_height - 10 - rows*4)/2;
+    int screen_x = get_center(columns*6);
+    int screen_y = (screen_height - 10 - rows*4)/2;
 
     fill_grid();
 
     cout << white;
-    for (int i = 0; i < columns; i++)
-        for (int j = 0; j < rows; j++)
-            {
-                if (i == selected_row && j == selected_column) cout << bright_magenta;
-                else cout << bright_white;
-                generate_box(x+(i*7),10+y+(j*4));
-            }
+    for (int y = 0; y < rows; y++)
+        for (int x = 0; x < columns; x++)
+        {
+            if (y == cursor[1] && x == cursor[0])
+                cout << bright_magenta;
+            else if (grid[y][x] == '#')
+                cout << black;
+            else if (x == selected[0] && y == selected[1])
+                generate_highlighted_box(y,x);
+            else
+                cout << bright_white;
+            generate_box(screen_x+(x*7),10+screen_y+(y*4));
+        }
     
 }
 
@@ -320,6 +326,99 @@ string remove_character(string input_str, char char_to_remove) {
     return result_str;
 }
 
+void generate_highlighted_box(int box_row, int box_column)
+{
+    cout << bright_cyan;
+    generate_box(box_column+(cursor[0]*7),10+box_row+(cursor[1]*4));
+    gotoxy(box_column+(cursor[0]*7)+2,10+box_row+(cursor[1]*4)+1);
+    cout << grid[cursor[1]][cursor[0]];
+}
+
+void erase_box(int box_row, int box_column)
+{
+    remove_box(box_column+(cursor[0]*7),10+box_row+(cursor[1]*4));
+}
+
+bool cell_is_available(int row, int column)
+{
+    bool cell_is_null = grid[row][column] == '#';
+    bool cell_has_already_been_selected = (column == selected[0] && row == selected[1]);
+    return (!cell_is_null && !cell_has_already_been_selected);
+}
+
+vector<int> calculate_upward_movement()
+{
+    int x = cursor[0], y = cursor[1];
+    for (int i = 1; i < rows; i++)
+    {
+        int new_y = y - i;
+        if (new_y < 0)
+            new_y += rows;
+        if (cell_is_available(new_y, x))
+            return {x,new_y};
+    }
+    return {x,y};
+}
+
+vector<int> calculate_leftward_movement()
+{
+    int x = cursor[0], y = cursor[1];
+    for (int i = 1; i < columns; i++)
+    {
+        int new_x = x - i;
+        if (new_x < 0)
+            new_x += columns;
+        if (cell_is_available(y, new_x))
+            return {new_x,y};
+    }
+    return {x,y};
+}
+
+vector<int> calculate_downward_movement()
+{
+    int x = cursor[0], y = cursor[1];
+    for (int i = 1; i < rows; i++)
+    {
+        int new_y = y + i;
+        if (new_y >= rows)
+            new_y -= rows;
+        if (cell_is_available(new_y, x))
+            return {x,new_y};
+    }
+    return {x,y};
+}
+
+vector<int> calculate_rightward_movement()
+{
+    int x = cursor[0], y = cursor[1];
+    for (int i = 1; i < columns; i++)
+    {
+        int new_x = x + i;
+        if (new_x >= columns)
+            new_x -= columns;
+        if (cell_is_available(y, new_x))
+            return {new_x,y};
+    }
+    return {x,y};
+}
+
+void move_to_near_cell()
+{
+    int x = get_center(columns*6);
+    int y = (screen_height - 10 - rows*4)/2;
+
+    vector<int> coordinates = calculate_rightward_movement();
+    if (coordinates[0] == cursor[0] && coordinates[1] == cursor[1])
+        coordinates = calculate_downward_movement();
+    if (coordinates[0] == cursor[0] && coordinates[1] == cursor[1])
+        check_for_victory();
+    // Then highlight that box
+    cursor[0] = coordinates[0];
+    cursor[1] = coordinates[1];
+    cout << bright_magenta;
+    generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
+}
+
 void handle_grid_movement()
 {
 
@@ -328,81 +427,83 @@ void handle_grid_movement()
 
     while (true) // Game Loop
     {
-        gotoxy(0,0); cout << selected_column << "," << selected_row;
+        gotoxy(0,0); cout << cursor[0] << "," << cursor[1];
 
         int c = getch();
+        vector<int> new_cordinates;
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
-            if (selected_row != selected_cell_row || selected_column != selected_cell_column)
+            if (cursor[1] != selected[1] || cursor[0] != selected[0])
             {
                 cout << bright_white;
-                generate_box(x+(selected_column*7),10+y+(selected_row*4));
+                generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
             }
         }
         
         if (c == key_up)
         {
-            selected_row = (selected_row <= 0 ? rows - 1 : selected_row - 1);
+            new_cordinates = calculate_upward_movement();
         }
         else if (c == key_down)
         {
-            selected_row = (selected_row >= rows - 1 ? 0 : selected_row + 1);
+            new_cordinates = calculate_downward_movement();
         }
         else if (c == key_left)
         {
-            selected_column = (selected_column <= 0 ? columns - 1 : selected_column - 1);
+            new_cordinates = calculate_leftward_movement();
         }
         else if (c == key_right)
         {
-            selected_column = (selected_column >= columns - 1 ? 0 : selected_column + 1);
+            new_cordinates = calculate_rightward_movement();
         }
-
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
+            cursor[0] = new_cordinates[0];
+            cursor[1] = new_cordinates[1];
             cout << bright_magenta;
-            generate_box(x+(selected_column*7),10+y+(selected_row*4));
+            generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
         }
         
         // Process the game
         if (c == key_space)
         {
-            cout << bright_cyan;
-            generate_box(x+(selected_column*7),10+y+(selected_row*4));
-            gotoxy(x+(selected_column*7)+2,10+y+(selected_row*4)+1); cout << grid[selected_row][selected_column];
+            generate_highlighted_box(y,x);
 
             // In case cell is just whitespace, skip it
-            if (grid[selected_row][selected_column] == ' ')
+            if (grid[cursor[1]][cursor[0]] == ' ')
             {
                 Sleep(500);
-                grid[selected_row][selected_column] = '\0';
-                remove_box(x+(selected_column*7),10+y+(selected_row*4));
-                if (check_for_victory()) break;
+                grid[cursor[1]][cursor[0]] = '#';
+                erase_box(y,x);
+                move_to_near_cell();
                 continue;
             }
 
-            if (selected_cell_row == -1)
+            if (selected[1] == -1)
             {
-                selected_cell_row = selected_row;
-                selected_cell_column = selected_column;
+                selected[1] = cursor[1];
+                selected[0] = cursor[0];
             }
             else
             {
                 Sleep(500);
                 // If same
-                if (grid[selected_cell_row][selected_cell_column] == grid[selected_row][selected_column])
+                if (grid[selected[1]][selected[0]] == grid[cursor[1]][cursor[0]] && !(selected[1] == cursor[1] && selected[0] == cursor[0]))
                 {
-                    grid[selected_cell_row][selected_cell_column] = '\0';
-                    remove_box(x+(selected_cell_column*7),10+y+(selected_cell_row*4));
-                    remove_box(x+(selected_column*7),10+y+(selected_row*4));
-                    if (check_for_victory()) break;
+                    grid[selected[1]][selected[0]] = '#';
+                    grid[cursor[1]][cursor[0]] = '#';
+                    remove_box(x+(selected[0]*7),10+y+(selected[1]*4));
+                    remove_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
+                    selected[0] = -1; selected[1] = -1;
+                    move_to_near_cell();
                 }
                 else // Otherwise, just reset
                 {
                     cout << bright_white;
-                    generate_box(x+(selected_column*7),10+y+(selected_row*4));
-                    generate_box(x+(selected_cell_column*7),10+y+(selected_cell_row*4));            
-                    selected_cell_row = -1, selected_cell_column = -1;
+                    generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
+                    generate_box(x+(selected[0]*7),10+y+(selected[1]*4));            
+                    selected[0] = -1, selected[1] = -1;
                 }
             }
             
@@ -421,7 +522,7 @@ bool check_for_victory()
     int nulls = 0;
     for (int i = 0; i < rows; i++)
         for (int j = 0; j < columns; j++)
-            if (grid[i][j] == '\0') nulls++;
+            if (grid[i][j] == '#') nulls++;
     if (nulls == rows*columns)
     {
         system("cls");
