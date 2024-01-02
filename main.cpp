@@ -21,6 +21,7 @@ using namespace std;
     
     void set_rc();
     void generate_box(int x, int y);
+    void generate_highlighted_box(int box_row, int box_column);
     void generate_grid();
     int get_random_number(int start, int end);
     void fill_grid();
@@ -346,79 +347,6 @@ bool cell_is_available(int row, int column)
     return (!cell_is_null && !cell_has_already_been_selected);
 }
 
-vector<int> calculate_upward_movement()
-{
-    int x = cursor[0], y = cursor[1];
-    for (int i = 1; i < rows; i++)
-    {
-        int new_y = y - i;
-        if (new_y < 0)
-            new_y += rows;
-        if (cell_is_available(new_y, x))
-            return {x,new_y};
-    }
-    return {x,y};
-}
-
-vector<int> calculate_leftward_movement()
-{
-    int x = cursor[0], y = cursor[1];
-    for (int i = 1; i < columns; i++)
-    {
-        int new_x = x - i;
-        if (new_x < 0)
-            new_x += columns;
-        if (cell_is_available(y, new_x))
-            return {new_x,y};
-    }
-    return {x,y};
-}
-
-vector<int> calculate_downward_movement()
-{
-    int x = cursor[0], y = cursor[1];
-    for (int i = 1; i < rows; i++)
-    {
-        int new_y = y + i;
-        if (new_y >= rows)
-            new_y -= rows;
-        if (cell_is_available(new_y, x))
-            return {x,new_y};
-    }
-    return {x,y};
-}
-
-vector<int> calculate_rightward_movement()
-{
-    int x = cursor[0], y = cursor[1];
-    for (int i = 1; i < columns; i++)
-    {
-        int new_x = x + i;
-        if (new_x >= columns)
-            new_x -= columns;
-        if (cell_is_available(y, new_x))
-            return {new_x,y};
-    }
-    return {x,y};
-}
-
-void move_to_near_cell()
-{
-    int x = get_center(columns*6);
-    int y = (screen_height - 10 - rows*4)/2;
-
-    vector<int> coordinates = calculate_rightward_movement();
-    if (coordinates[0] == cursor[0] && coordinates[1] == cursor[1])
-        coordinates = calculate_downward_movement();
-    if (coordinates[0] == cursor[0] && coordinates[1] == cursor[1])
-        check_for_victory();
-    // Then highlight that box
-    cursor[0] = coordinates[0];
-    cursor[1] = coordinates[1];
-    cout << bright_magenta;
-    generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
-}
-
 void handle_grid_movement()
 {
 
@@ -430,44 +358,49 @@ void handle_grid_movement()
         gotoxy(0,0); cout << cursor[0] << "," << cursor[1];
 
         int c = getch();
-        vector<int> new_cordinates;
 
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
             if (cursor[1] != selected[1] || cursor[0] != selected[0])
             {
-                cout << bright_white;
+                if (grid[cursor[1]][cursor[0]] == '#')
+                    cout << black;
+                else
+                    cout << bright_white;
                 generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
             }
         }
         
         if (c == key_up)
         {
-            new_cordinates = calculate_upward_movement();
+            cursor[1] = (cursor[1] <= 0 ? rows - 1 : cursor[1] - 1);
         }
         else if (c == key_down)
         {
-            new_cordinates = calculate_downward_movement();
+            cursor[1] = (cursor[1] >= rows - 1 ? 0 : cursor[1] + 1);
         }
         else if (c == key_left)
         {
-            new_cordinates = calculate_leftward_movement();
+            cursor[0] = (cursor[0] <= 0 ? columns - 1 : cursor[0] - 1);
         }
         else if (c == key_right)
         {
-            new_cordinates = calculate_rightward_movement();
+            cursor[0] = (cursor[0] >= columns - 1 ? 0 : cursor[0] + 1);
         }
         if (c == key_up || c == key_down || c == key_left || c == key_right)
         {
-            cursor[0] = new_cordinates[0];
-            cursor[1] = new_cordinates[1];
-            cout << bright_magenta;
+            if (grid[cursor[1]][cursor[0]] == '#')
+                cout << bright_black;
+            else
+                cout << bright_magenta;
             generate_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
         }
         
         // Process the game
         if (c == key_space)
         {
+            if (grid[cursor[1]][cursor[0]] == '#')
+                continue;
             generate_highlighted_box(y,x);
 
             // In case cell is just whitespace, skip it
@@ -476,7 +409,6 @@ void handle_grid_movement()
                 Sleep(500);
                 grid[cursor[1]][cursor[0]] = '#';
                 erase_box(y,x);
-                move_to_near_cell();
                 continue;
             }
 
@@ -496,7 +428,6 @@ void handle_grid_movement()
                     remove_box(x+(selected[0]*7),10+y+(selected[1]*4));
                     remove_box(x+(cursor[0]*7),10+y+(cursor[1]*4));
                     selected[0] = -1; selected[1] = -1;
-                    move_to_near_cell();
                 }
                 else // Otherwise, just reset
                 {
