@@ -259,9 +259,8 @@ void generate_grid()
                 generate_highlighted_box(y, x);
             else
                 cout << bright_white;
+
             generate_box(screen_x + (x * 7), 10 + screen_y + (y * 4));
-            gotoxy(screen_x + (x * 7) + 2, 10 + screen_y + (y * 4) + 1);
-            cout << grid[y][x];
         }
     }
 }
@@ -324,13 +323,11 @@ string get_grid_fill_sequence()
         }
     }
     sequence += sequence;
-    if (rows * columns / 2 % 2 != 0)
+    if ((rows * (columns/2)) % 2 != 0)
         sequence += ' ';
-    
     // Bogo Sorting
     mt19937 g(time(0));
     shuffle(sequence.begin(), sequence.end(), g);
-
     return sequence;
 }
 string remove_character(string input_str, char char_to_remove)
@@ -372,17 +369,21 @@ void print_attempts_bar()
     int null_bar_length = title_width - highlighted_bar_length;
     string bar = "";
     int percentage = attempts_left_percent * 100;
+
     if (percentage > 66)
         bar += bright_green;
     else if (percentage > 33)
         bar += bright_yellow;
     else
         bar += bright_red;
+
     for (int i = 0; i < highlighted_bar_length; i++)
         bar += '\xDC';
+
     bar += bright_black;
     for (int i = 0; i < null_bar_length; i++)
         bar += '\xDC';
+
     gotoxy((screen_width - title_width) / 2, 0);
     cout << bar;
 }
@@ -443,6 +444,7 @@ void handle_grid_movement()
             // In case cell is just whitespace, skip it
             if (grid[cursor[1]][cursor[0]] == ' ')
             {
+                gotoxy(0,0);
                 Sleep(500);
                 grid[cursor[1]][cursor[0]] = '#';
                 erase_box(y, x);
