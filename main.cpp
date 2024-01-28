@@ -256,6 +256,8 @@ void generate_grid()
             else
                 cout << bright_white;
             generate_box(screen_x+(x*7),10+screen_y+(y*4));
+            gotoxy(screen_x+(x*7)+2,10+screen_y+(y*4)+1);
+            cout << grid[y][x];
         }
     
 }
